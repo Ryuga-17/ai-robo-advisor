@@ -21,11 +21,15 @@ jobs:
         id: get-content
         run: |
           if [ "${{ github.event_name }}" = "issues" ]; then
-            echo "content=${{ github.event.issue.body }}" >> $GITHUB_OUTPUT
+            echo "content<<EOF" >> $GITHUB_OUTPUT
+            echo "${{ github.event.issue.body }}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
             echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
             echo "type=issue" >> $GITHUB_OUTPUT
           else
-            echo "content=${{ github.event.pull_request.body }}" >> $GITHUB_OUTPUT
+            echo "content<<EOF" >> $GITHUB_OUTPUT
+            echo "${{ github.event.pull_request.body }}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
             echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
             echo "type=pr" >> $GITHUB_OUTPUT
           fi
@@ -35,11 +39,17 @@ jobs:
         run: |
           CONTENT="${{ steps.get-content.outputs.content }}"
           
+          # Debug: Log content length
+          echo "Content length: ${#CONTENT}"
+          
           # Check for common reproduction keywords (case insensitive)
-          if echo "$CONTENT" | grep -qi -E "(steps to reproduce|reproduction steps|how to reproduce|reproduce|reproduction|steps:|1\.|2\.|3\.|step 1|step 2|step 3)"; then
+          # Look for numbered lists, steps, or reproduction keywords
+          if echo "$CONTENT" | grep -qi -E "(steps to reproduce|reproduction steps|how to reproduce|steps:|^[[:space:]]*[0-9]+\.|^[[:space:]]*step [0-9]+|reproduce|reproduction)"; then
             echo "has_reproduction=true" >> $GITHUB_OUTPUT
+            echo "Found reproduction steps"
           else
             echo "has_reproduction=false" >> $GITHUB_OUTPUT
+            echo "No reproduction steps found"
           fi
 
       - name: Post reproduction checklist
